@@ -23,6 +23,7 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 )
@@ -1004,7 +1005,12 @@ func refResolve(adapter ref.TypeAdapter, idx ref.Val, obj interface{}) (ref.Val,
 	if isMapper {
 		elem, found := mapper.Find(idx)
 		if !found {
-			return nil, fmt.Errorf("no such key: %v", idx)
+			// patched by koalr
+			reflectedMap, ok := obj.(protoreflect.Map)
+			if !ok {
+				return nil, fmt.Errorf("no such key: %v", idx)
+			}
+			return adapter.NativeToValue(reflectedMap.NewValue().Interface()), nil
 		}
 		if types.IsError(elem) {
 			return nil, elem.(*types.Err)
